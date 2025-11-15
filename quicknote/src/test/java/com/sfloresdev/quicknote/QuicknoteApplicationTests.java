@@ -2,17 +2,19 @@ package com.sfloresdev.quicknote;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.annotation.DirtiesContext;
+import java.net.URI;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest (webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-
 class QuicknoteApplicationTests {
     @Autowired
     TestRestTemplate restTemplate;
@@ -31,6 +33,41 @@ class QuicknoteApplicationTests {
         String title = documentContext.read("$.title", String.class);
         assertThat(title).isNotNull();
         assertThat(title).isEqualTo("Reunión equipo");
+    }
+
+    @Test
+    void shouldNotReturnANoteWithAnUnknownId(){
+        ResponseEntity<String> response = restTemplate
+                .getForEntity("/notes/25", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).isBlank();
+    }
+
+
+    @Test
+    @DirtiesContext // <- To make sure the test is executed in a clean environment
+    void shouldCreateANote(){
+        // Create a "Note" example object
+        NoteDto newNote = new NoteDto(
+                null,
+                "Meeting Notes",
+                "Project discussion",
+                "text",
+                null,
+                false,
+                false,
+                "blue");
+        // Check the response of the action
+        ResponseEntity<Void> createResponse = restTemplate
+                .postForEntity("/notes", newNote, Void.class);
+        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Save the URI location of the note that we created
+        URI locationOfNote = createResponse.getHeaders().getLocation();
+        // Check that the response status is OK
+        ResponseEntity<String> getResponse = restTemplate
+                .getForEntity(locationOfNote, String.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
 	@Test

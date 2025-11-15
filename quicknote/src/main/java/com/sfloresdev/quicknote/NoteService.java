@@ -18,4 +18,8 @@ public class NoteService {
             return Optional.empty();
         return noteRepository.findById(id);
     }
+
+    public Note save(Note note){
+        return noteRepository.save(note);
+    }
 }

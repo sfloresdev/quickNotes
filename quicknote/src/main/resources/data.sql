@@ -18,3 +18,5 @@ VALUES (6, 'Cumpleaños Ana', 'Comprar regalo y enviar tarjeta de felicitación'
 
 INSERT INTO notes (id, title, content, type, creation_date, is_pinned, is_archived, color)
 VALUES (7, 'Libro recomendado', 'Leer Clean Code para mejorar prácticas de programación', 'personal', '2025-11-09', false, false, 'pink');
+
+SELECT setval('notes_id_seq', (SELECT MAX(id) FROM notes));

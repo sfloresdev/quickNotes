@@ -1,11 +1,10 @@
 package com.sfloresdev.quicknote;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.URI;
 import java.util.Optional;
 
 @RestController
@@ -26,5 +25,16 @@ public class NoteController {
         Note note = noteOptional.get();
         NoteDto noteDto = NoteDto.fromEntity(note);
         return ResponseEntity.ok(noteDto);
+    }
+
+    @PostMapping("")
+    private ResponseEntity<Void> createNote(@RequestBody NoteDto noteDto, UriComponentsBuilder ucb){
+        Note note = noteDto.toEntity(); // Create a note
+        note  = noteService.save(note);
+        // Save the URI path to "location"
+        URI location = ucb.path("/notes/{id}")
+                .buildAndExpand(note.getId())
+                .toUri();
+        return ResponseEntity.created(location).build();
     }
 }
