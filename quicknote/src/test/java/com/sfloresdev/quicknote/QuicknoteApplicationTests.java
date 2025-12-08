@@ -2,11 +2,14 @@ package com.sfloresdev.quicknote;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
-import org.junit.jupiter.api.BeforeEach;
+import net.minidev.json.JSONArray;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
@@ -68,6 +71,80 @@ class QuicknoteApplicationTests {
         ResponseEntity<String> getResponse = restTemplate
                 .getForEntity(locationOfNote, String.class);
         assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void shouldReturnAllNotes(){
+        ResponseEntity<String> response = restTemplate
+                .getForEntity("/notes", String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        DocumentContext documentContext = JsonPath.parse(response.getBody());
+        int size = documentContext.read("$.size()");
+        assertThat(size).isEqualTo(7);
+
+        JSONArray ids = documentContext.read("$..id");
+        assertThat(ids).isNotEmpty();
+        assertThat(ids).containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 7);
+
+        JSONArray titles = documentContext.read("$..title");
+        assertThat(titles).isNotEmpty();
+        assertThat(titles).containsExactlyInAnyOrder("Reunión equipo",
+                "Lista de compras",
+                "Recordatorio médico",
+                "Idea app",
+                "Tareas pendientes",
+                "Cumpleaños Ana",
+                "Libro recomendado");
+    }
+
+    @Test
+    @DirtiesContext
+    void shouldUpdateANote(){
+        NoteDto updatedNote = new NoteDto(
+                null,
+                "Updated Meeting Notes",
+                "Updated Project discussion",
+                "text",
+                null,
+                false,
+                false,
+                "blue"
+        );
+        HttpEntity<NoteDto> requestEntity = new HttpEntity<>(updatedNote);
+        ResponseEntity<Void> response = restTemplate
+                .exchange("/notes/1", HttpMethod.PUT, requestEntity, Void.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<String> getResponse = restTemplate
+                .getForEntity("/notes/1", String.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        DocumentContext documentContext = JsonPath.parse(getResponse.getBody());
+        String title = documentContext.read("$.title");
+        assertThat(title).isEqualTo("Updated Meeting Notes");
+        String content = documentContext.read("$.content");
+        assertThat(content).isEqualTo("Updated Project discussion");
+    }
+
+    @Test
+    @DirtiesContext
+    void shouldDeleteANote(){
+        ResponseEntity<Void> response = restTemplate
+                .exchange("/notes/1", HttpMethod.DELETE, null, Void.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        ResponseEntity<String> getResponse = restTemplate
+                .getForEntity("/notes/1", String.class);
+        assertThat(getResponse.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
+    @Test
+    void shoulReturnNotFoundNonExistenNote(){
+        ResponseEntity<Void> response = restTemplate
+                .exchange("/notes/999", HttpMethod.DELETE, null, Void.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
 	@Test
